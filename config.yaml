@@ -1,0 +1,9 @@
+lift_ids:
+  - LIFT_1
+  - LIFT_2
+  - LIFT_3
+  - LIFT_4
+  - LIFT_5
+  - LIFT_6
+data_folder: "lift_data"
+max_floor: 16
