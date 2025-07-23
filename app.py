@@ -3,6 +3,7 @@ import json
 import yaml
 from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask_cors import CORS
 
 # ---------------- Load Config ----------------
 with open("config.yaml", "r") as f:
@@ -19,16 +20,30 @@ os.makedirs(DATA_FOLDER, exist_ok=True)
 app = Flask(__name__)
 socketio = SocketIO(app)
 
+# Enable CORS for localhost:3000
+CORS(app, origins="http://localhost:3000")  # Allow only localhost:3000
+
+# Allow specific origins to connect to Socket.IO
+socketio = SocketIO(app, cors_allowed_origins=["http://localhost:3000"])  # Only allow local hosts 3000 and 5000
+
+
 # -------- Save Lift Data to JSON File --------
 def save_lift_data(lift_id, data):
     data = dict(data)
-    data.pop('id', None)  # Remove ID
-
     lift_file = os.path.join(DATA_FOLDER, f"{lift_id}.json")
     os.makedirs(DATA_FOLDER, exist_ok=True)
 
+    # Check if the data has changed before saving
+    if os.path.exists(lift_file):
+        with open(lift_file, 'r') as f:
+            existing_data = json.load(f)
+        
+        if existing_data == data:  # No change in data, no need to save or emit
+            return False
+
     with open(lift_file, 'w') as f:
         json.dump(data, f)
+    return True
 
 # -------- REST API: POST /update_lift --------
 @app.route('/update_lift', methods=['POST'])
@@ -42,8 +57,12 @@ def update_lift():
     if lift_id not in LIFT_IDS:
         return jsonify({'status': 'error', 'message': 'Invalid lift id'}), 400
 
-    save_lift_data(lift_id, data)
-    socketio.emit('lift_data_update', data, room=lift_id)
+    # Save data and check if it has changed
+    new_data = save_lift_data(lift_id, data)
+
+    if new_data:
+        socketio.emit('lift_data_update', data, room=lift_id)
+
     return jsonify({'status': 'success'}), 200
 
 # -------- REST API: GET /get_max_floor --------
@@ -67,7 +86,6 @@ def get_lift_data(lift_id):
 
     return jsonify({'status': 'success', 'data': data}), 200
 
-
 # ---------------- API: Get Data for All Lifts ----------------
 @app.route('/get_all_lifts', methods=['GET'])
 def get_all_lifts():
@@ -78,10 +96,9 @@ def get_all_lifts():
             with open(lift_file, 'r') as f:
                 all_data[lift_id] = json.load(f)
         else:
-            all_data[lift_id] = {"status": "blocked"}  # Mark as blocked if no data
+            all_data[lift_id] = {}  # Mark as blocked if no data
 
     return jsonify({'status': 'success', 'data': all_data}), 200
-
 
 # -------- WebSocket: Join/Leave Room --------
 @socketio.on('join_lift')

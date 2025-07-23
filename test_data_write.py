@@ -7,9 +7,9 @@ base_url = "http://127.0.0.1:5000/update_lift"
 # Sample lift data to be sent to the backend (replace with your microcontroller's data)
 lift_data = {
     "id": "LIFT_1",              # Lift ID (replace with an actual lift ID)
-    "door_open": 1,              # 1 for open, 0 for closed (door state)
-    "current_floor": 5,          # Current floor of the lift
-    "alarm": 0                   # 0 for no alarm, 1 for alarm triggered
+    "door_open": 0,              # 1 for open, 0 for closed (door state)
+    "current_floor": 15,          # Current floor of the lift
+    "alarm": 1                   # 0 for no alarm, 1 for alarm triggered
 }
 
 # Make the POST request to the Flask API
